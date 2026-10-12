@@ -1,0 +1,95 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+// ReminderType (string): "MEDICINE" | "MEAL" | "SLEEP" | "WAKE" | "CUSTOM"
+// CheckInStatus (string): "PENDING" | "DONE_ON_TIME" | "DONE_LATE" | "MISSED" | "SKIPPED"
+// SQLite has no native enum support, so both are plain strings validated in application code (see src/lib/types.ts).
+
+// The elderly parent using the mobile app
+model Elder {
+  id           String   @id @default(cuid())
+  name         String
+  phone        String?  @unique
+  avatarColor  String   @default("#5B8DEF")
+  timezone     String   @default("Asia/Kolkata")
+  cameraUrl    String?  // base URL of the elder's ESP32-CAM, e.g. http://192.168.1.50 (stream served at {cameraUrl}/stream)
+  createdAt    DateTime @default(now())
+
+  caregivers   CaregiverLink[]
+  reminders    Reminder[]
+  checkIns     CheckIn[]
+  moodLogs     MoodLog[]
+}
+
+// A child / caregiver using the web admin dashboard
+model Caregiver {
+  id        String   @id @default(cuid())
+  name      String
+  email     String   @unique
+  createdAt DateTime @default(now())
+
+  elders    CaregiverLink[]
+}
+
+// Many-to-many: a caregiver can watch multiple elders, an elder can have multiple caregivers
+model CaregiverLink {
+  id          String    @id @default(cuid())
+  elderId     String
+  caregiverId String
+  relation    String    @default("Child")
+
+  elder       Elder     @relation(fields: [elderId], references: [id], onDelete: Cascade)
+  caregiver   Caregiver @relation(fields: [caregiverId], references: [id], onDelete: Cascade)
+
+  @@unique([elderId, caregiverId])
+}
+
+// A recurring schedule item set by the caregiver: medicine time, sleep time, meal time, etc.
+model Reminder {
+  id         String        @id @default(cuid())
+  elderId    String
+  type       String        // ReminderType
+  label      String
+  time       String        // "HH:mm" 24h, local to elder's timezone
+  daysOfWeek String        @default("1,2,3,4,5,6,7") // comma separated 1=Mon..7=Sun
+  question   String        // e.g. "Did you take your Blood Pressure medicine?"
+  active     Boolean       @default(true)
+  createdAt  DateTime      @default(now())
+
+  elder      Elder         @relation(fields: [elderId], references: [id], onDelete: Cascade)
+  checkIns   CheckIn[]
+}
+
+// One instance of a reminder firing and the elder's response to it
+model CheckIn {
+  id           String        @id @default(cuid())
+  elderId      String
+  reminderId   String
+  scheduledFor DateTime
+  respondedAt  DateTime?
+  status       String        @default("PENDING") // CheckInStatus
+  response     String?       // free-form or "yes"/"no"
+  note         String?
+
+  elder        Elder         @relation(fields: [elderId], references: [id], onDelete: Cascade)
+  reminder     Reminder      @relation(fields: [reminderId], references: [id], onDelete: Cascade)
+
+  @@index([elderId, scheduledFor])
+}
+
+// Simple daily mood/wellbeing self-report from the elder app
+model MoodLog {
+  id        String   @id @default(cuid())
+  elderId   String
+  mood      String   // "great" | "okay" | "not_great"
+  note      String?
+  createdAt DateTime @default(now())
+
+  elder     Elder    @relation(fields: [elderId], references: [id], onDelete: Cascade)
+}

@@ -1,0 +1,50 @@
+node_modules/
+dist/
+.local/
+*.tsbuildinfo
+build/
+.next/
+out/
+coverage/
+.turbo/
+
+# env
+.env
+.env.local
+.env.*.local
+!.env.example
+
+# logs
+*.log
+npm-debug.log*
+pnpm-debug.log*
+
+# editor / os
+.DS_Store
+# AppleDouble sidecar files created on non-HFS volumes (e.g. exFAT externals)
+._*
+.idea/
+.vscode/*
+!.vscode/extensions.json
+!.vscode/settings.json
+
+# terraform
+infra/**/.terraform/
+infra/**/*.tfstate
+infra/**/*.tfstate.*
+infra/**/*.tfvars
+!infra/**/*.tfvars.example
+infra/**/.terraform.lock.hcl
+
+# test artifacts
+playwright-report/
+test-results/
+blob-report/
+.playwright/
+
+# local data
+tmp/
+.localstack/
+/.worktrees/
+graphify-out/
+openhands/
